@@ -33,6 +33,7 @@
 #include <sound/jack.h>
 #include "../../codecs/rt5651.h"
 #include "../atom/sst-atom-controls.h"
+#include "../common/sst-acpi.h"
 
 enum {
 	BYT_RT5651_DMIC1_MAP,
@@ -458,6 +459,8 @@ static struct snd_soc_card byt_rt5651_card = {
 	.fully_routed = true,
 };
 
+static char byt_rt5651_codec_name[16]; /* i2c-<HID>:00 with HID being 8 chars */
+
 static bool is_valleyview(void)
 {
 	static const struct x86_cpu_id cpu_ids[] = {
@@ -473,6 +476,10 @@ static bool is_valleyview(void)
 static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 {
 	int ret_val = 0;
+	struct sst_acpi_mach *mach;
+	const char *i2c_name = NULL;
+	int i;
+	int dai_index;
 	struct byt_rt5651_private *priv;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_ATOMIC);
@@ -481,6 +488,25 @@ static int snd_byt_rt5651_mc_probe(struct platform_device *pdev)
 
 	/* register the soc card */
 	byt_rt5651_card.dev = &pdev->dev;
+	mach = byt_rt5651_card.dev->platform_data;
+
+	/* fix index of codec dai */
+	dai_index = MERR_DPCM_COMPR + 1;
+	for (i = 0; i < ARRAY_SIZE(byt_rt5651_dais); i++) {
+		if (!strcmp(byt_rt5651_dais[i].codec_name, "i2c-10EC5651:00")) {
+			dai_index = i;
+			break;
+		}
+	}
+
+	/* fixup codec name based on HID */
+	i2c_name = sst_acpi_find_name_from_hid(mach->id);
+	if (i2c_name != NULL) {
+		snprintf(byt_rt5651_codec_name, sizeof(byt_rt5651_codec_name),
+			"%s%s", "i2c-", i2c_name);
+
+		byt_rt5651_dais[dai_index].codec_name = byt_rt5651_codec_name;
+	}
 
 	/* check quirks before creating card */
 	dmi_check_system(byt_rt5651_quirk_table);
