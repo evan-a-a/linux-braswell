@@ -485,7 +485,9 @@ static struct sst_acpi_mach sst_acpi_bytcr[] = {
 						&byt_rvp_platform_data },
 	{"10EC5648", "cht-bsw-rt5645", "intel/fw_sst_0f28.bin", "cht-bsw", NULL,
 						&byt_rvp_platform_data },
-
+	/* use CHT driver to Baytrail Chromebooks */
+	{"193C9890", "cht-bsw-max98090", "intel/fw_sst_0f28.bin", "cht-bsw", NULL,
+						&byt_rvp_platform_data },
 	{},
 };
 
