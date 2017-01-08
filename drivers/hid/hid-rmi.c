@@ -1226,6 +1226,14 @@ static int rmi_input_configured(struct hid_device *hdev, struct hid_input *hi)
 	if (ret)
 		goto exit;
 
+	if (!device_may_wakeup(hdev->dev.parent)) {
+		ret = rmi_set_sleep_mode(hdev, RMI_SLEEP_NORMAL);
+		if (ret) {
+			hid_err(hdev, "can not write sleep mode\n");
+			goto exit;
+		}
+	}
+
 	hid_info(hdev, "firmware id: %ld\n", data->firmware_id);
 
 	__set_bit(EV_ABS, input->evbit);
