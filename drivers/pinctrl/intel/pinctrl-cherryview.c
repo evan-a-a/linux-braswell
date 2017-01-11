@@ -492,7 +492,7 @@ static const struct chv_community north_community = {
 	 * 8 interrupts. The upper half (8-15) can only be used to trigger
 	 * GPEs.
 	 */
-	.nirqs = 9,
+	.nirqs = 8,
 };
 
 static const struct pinctrl_pin_desc east_pins[] = {
