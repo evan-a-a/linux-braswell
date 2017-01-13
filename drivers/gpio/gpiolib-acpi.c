@@ -224,6 +224,7 @@ static acpi_status acpi_gpiochip_request_interrupt(struct acpi_resource *ares,
 	irq = gpiod_to_irq(desc);
 	if (irq < 0) {
 		dev_err(chip->parent, "Failed to translate GPIO to IRQ\n");
+		dev_err(chip->parent, "Got irq of %i\n", irq);
 		goto fail_unlock_irq;
 	}
 
