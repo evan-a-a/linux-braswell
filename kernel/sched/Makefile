@@ -25,7 +25,7 @@ obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
 obj-$(CONFIG_SCHED_DEBUG) += debug.o
 obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
 endif
-obj-y += wait.o swait.o completion.o idle.o cputime.o
+obj-y += wait.o swait.o swork.o completion.o idle.o cputime.o
 obj-$(CONFIG_SMP) += cpupri.o
 obj-$(CONFIG_SCHEDSTATS) += stats.o
 obj-$(CONFIG_CPU_FREQ) += cpufreq.o
