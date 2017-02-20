@@ -3109,7 +3109,7 @@ static int rt5645_jack_detect(struct snd_soc_codec *codec, int jack_insert)
 	unsigned int val;
 
 	if (jack_insert) {
-		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0006);
+		regmap_write(rt5645->regmap, RT5645_CHARGE_PUMP, 0x0e06);
 
 		/* for jack type detect */
 		snd_soc_dapm_force_enable_pin(dapm, "LDO2");
@@ -3242,11 +3242,21 @@ static void rt5645_jack_detect_work(struct work_struct *work)
 		val = snd_soc_read(rt5645->codec, RT5645_A_JD_CTRL1) & 0x0070;
 		break;
 	default: /* 1 port */
-		val = snd_soc_read(rt5645->codec, RT5645_A_JD_CTRL1) & 0x0020;
+		//val = snd_soc_read(rt5645->codec, RT5645_A_JD_CTRL1) & 0x0020;
+		gpio_state = gpiod_get_value(rt5645->gpiod_hp_det);
+		printk(KERN_ERR "gpio_state = %d\n",
+		       gpio_state);
+
+		
+		val = snd_soc_read(rt5645->codec, RT5645_A_JD_CTRL1);
+		val = ~val;
+		val = val & 0x0020;
 		break;
 
 	}
 
+	printk(KERN_ERR "jack detect val %d \n", val);
+	
 	switch (val) {
 	/* jack in */
 	case 0x30: /* 2 port */
@@ -3545,8 +3555,10 @@ MODULE_DEVICE_TABLE(i2c, rt5645_i2c_id);
 #ifdef CONFIG_ACPI
 static const struct acpi_device_id rt5645_acpi_match[] = {
 	{ "10EC5645", 0 },
+	{ "10EC5648", 0 },
 	{ "10EC5650", 0 },
 	{ "10EC5640", 0 },
+	{ "10EC3270", 0 },
 	{},
 };
 MODULE_DEVICE_TABLE(acpi, rt5645_acpi_match);
@@ -3581,6 +3593,23 @@ static const struct dmi_system_id dmi_platform_intel_braswell[] = {
 		.ident = "Microsoft Surface 3",
 		.matches = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "Surface 3"),
+		},
+	},
+	{ }
+};
+
+static struct rt5645_platform_data general_platform_data2 = {
+	.dmic1_data_pin = RT5645_DMIC_DATA_IN2N,
+	.dmic2_data_pin = RT5645_DMIC2_DISABLE,
+	.jd_mode = 3,
+};
+
+static struct dmi_system_id dmi_platform_intel_cht[] = {
+	{
+		.ident = "ASUS T100HAN",
+		.matches = {
+			DMI_EXACT_MATCH(DMI_SYS_VENDOR, "ASUSTeK COMPUTER INC."),
+			DMI_MATCH(DMI_PRODUCT_NAME, "T100HAN"),
 		},
 	},
 	{ }
@@ -3653,13 +3682,23 @@ static int rt5645_i2c_probe(struct i2c_client *i2c,
 		rt5645_parse_dt(rt5645, &i2c->dev);
 	else if (dmi_check_system(dmi_platform_intel_braswell))
 		rt5645->pdata = general_platform_data;
+	else if (dmi_check_system(dmi_platform_intel_cht))
+		rt5645->pdata = general_platform_data2;
+	else
+		rt5645->pdata.jd_mode = 3;
 
 	rt5645->gpiod_hp_det = devm_gpiod_get_optional(&i2c->dev, "hp-detect",
 						       GPIOD_IN);
 
 	if (IS_ERR(rt5645->gpiod_hp_det)) {
-		dev_err(&i2c->dev, "failed to initialize gpiod\n");
-		return PTR_ERR(rt5645->gpiod_hp_det);
+		dev_info(&i2c->dev, "failed to initialize gpiod\n");
+		ret = PTR_ERR(rt5645->gpiod_hp_det);
+		/*
+		 * Continue if optional gpiod is missing, bail for all other
+		 * errors, including -EPROBE_DEFER
+		 */
+		if (ret != -ENOENT)
+			return ret;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(rt5645->supplies); i++)
